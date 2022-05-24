@@ -19,6 +19,7 @@ async function run() {
     try {
         await client.connect();
         const userCollection = client.db("allumin_apparatus").collection("user_collection");
+        const toolsCollection = client.db("allumin_apparatus").collection("tools_collection");
 
         // generating Access-Token during login for Client side
         app.post('/login', async (req, res) => {
@@ -27,6 +28,18 @@ async function run() {
             const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);
             res.send({ accessToken });
         });
+        //Home page 3 items load
+        app.get('/tools',async(req, res)=> {
+            const query = {};
+            const result = await toolsCollection.find(query).limit(3).toArray();
+            res.send(result);
+        })
+        //Items page All items load
+        app.get('/alltools',async(req, res)=> {
+            const query = {};
+            const result = await toolsCollection.find(query).toArray();
+            res.send(result);
+        })
 
     }
     finally {
