@@ -20,6 +20,7 @@ async function run() {
         await client.connect();
         const userCollection = client.db("allumin_apparatus").collection("user_collection");
         const toolsCollection = client.db("allumin_apparatus").collection("tools_collection");
+        const orderCollection = client.db("allumin_apparatus").collection("order_collection");
 
         // generating Access-Token during login for Client side
         app.post('/login', async (req, res) => {
@@ -47,6 +48,31 @@ async function run() {
             const result = await toolsCollection.findOne(query);
             res.send(result);
         })
+        //Items details by ID
+        app.post('/placeorder',async(req, res)=> {
+            const doc = req.body;
+            // const toolID = doc.toolId;
+            
+            // const query = {_id: ObjectId(id)};
+            const result = await orderCollection.insertOne(doc);
+            res.send(result);
+        });
+
+        //Update stock 
+        app.put('/updatestock/:id',async(req,res)=>{
+            const id = req.params.id;
+            // console.log('target ID:',id);
+            const newInfo = req.body;
+            // console.log('Target Data:',newInfo);
+            const filter = { _id: ObjectId(id) };
+            // const options = { upsert: true };
+            const updatedItem = {
+                $set: newInfo
+            };
+            const result = await toolsCollection.updateOne(filter, updatedItem);
+            console.log(result);
+            res.send(result);
+        });
 
     }
     finally {
