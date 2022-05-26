@@ -85,23 +85,22 @@ async function run() {
             console.log(result);
             res.send(result);
         });
+        //Add/update user info in DB
+        app.put('/updateuser',async(req,res)=>{
+            const newInfo = req.body;
+            
+            const filter = {email : newInfo.email};
+            // console.log('Target Mail:',newInfo.email);
+            const options = { upsert: true };
+            const updatedItem = {
+                $set: newInfo
+            };
+            const result = await userCollection.updateOne(filter, updatedItem,options);
+            // console.log(result);
+            res.send(result);
+        });
 
-        //Update Users in DB
-        // app.patch('/updatestock',async(req,res)=>{
-        //     const id = req.params.id;
-        //     // console.log('target ID:',id);
-        //     const newInfo = req.body;
-        //     // console.log('Target Data:',newInfo);
-        //     const filter = { _id: ObjectId(id) };
-        //     // const options = { upsert: true };
-        //     const updatedItem = {
-        //         $set: newInfo
-        //     };
-        //     const result = await toolsCollection.updateOne(filter, updatedItem);
-        //     console.log(result);
-        //     res.send(result);
-        // });
-
+        
     }
     finally {
 
