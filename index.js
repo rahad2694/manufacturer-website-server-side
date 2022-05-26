@@ -25,8 +25,20 @@ async function run() {
         // generating Access-Token during login for Client side
         app.post('/login', async (req, res) => {
             const email = req.body;
-            console.log(email);
-            const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);
+            const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);  //CHECK EMAIL
+            const userData = req.body;
+            //Adding User in DB
+            console.log('the main is:',email.email);
+            const filter = {email : email.email};
+            
+            const options = { upsert: true };
+            const updatedUser = {
+                $set: userData
+            };
+            const result = await userCollection.updateOne(filter, updatedUser,options);
+            console.log("Result is:",result);
+
+            //Sending AccessToken to client-side
             res.send({ accessToken });
         });
         //Home page 3 items load
@@ -73,6 +85,22 @@ async function run() {
             console.log(result);
             res.send(result);
         });
+
+        //Update Users in DB
+        // app.patch('/updatestock',async(req,res)=>{
+        //     const id = req.params.id;
+        //     // console.log('target ID:',id);
+        //     const newInfo = req.body;
+        //     // console.log('Target Data:',newInfo);
+        //     const filter = { _id: ObjectId(id) };
+        //     // const options = { upsert: true };
+        //     const updatedItem = {
+        //         $set: newInfo
+        //     };
+        //     const result = await toolsCollection.updateOne(filter, updatedItem);
+        //     console.log(result);
+        //     res.send(result);
+        // });
 
     }
     finally {
