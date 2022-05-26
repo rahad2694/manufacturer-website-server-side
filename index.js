@@ -138,6 +138,12 @@ async function run() {
             const result = await ratingCollection.insertOne(doc);
             res.send(result);
         });
+        //Load All Ratings
+        app.get('/allratings',async(req, res)=> {
+            const query = {};
+            const result = await ratingCollection.find(query).toArray();
+            res.send(result);
+        })
 
     }
     finally {
