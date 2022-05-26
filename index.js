@@ -21,6 +21,7 @@ async function run() {
         const userCollection = client.db("allumin_apparatus").collection("user_collection");
         const toolsCollection = client.db("allumin_apparatus").collection("tools_collection");
         const orderCollection = client.db("allumin_apparatus").collection("order_collection");
+        const ratingCollection = client.db("allumin_apparatus").collection("rating_collection");
 
         // generating Access-Token during login for Client side
         app.post('/login', async (req, res) => {
@@ -36,7 +37,7 @@ async function run() {
                 $set: userData
             };
             const result = await userCollection.updateOne(filter, updatedUser,options);
-            console.log("Result is:",result);
+            // console.log("Result is:",result);
 
             //Sending AccessToken to client-side
             res.send({ accessToken });
@@ -60,7 +61,7 @@ async function run() {
             const result = await toolsCollection.findOne(query);
             res.send(result);
         })
-        //Items details by ID
+        //Add order in DB
         app.post('/placeorder',async(req, res)=> {
             const doc = req.body;
             // const toolID = doc.toolId;
@@ -82,7 +83,7 @@ async function run() {
                 $set: newInfo
             };
             const result = await toolsCollection.updateOne(filter, updatedItem);
-            console.log(result);
+            // console.log(result);
             res.send(result);
         });
         //Add/update user info in DB
@@ -100,7 +101,44 @@ async function run() {
             res.send(result);
         });
 
-        
+        //User details by email
+        app.get('/user/:email',async(req, res)=> {
+            const email = req.params.email;
+            const query = {email};
+            console.log(query);
+            const result = await userCollection.findOne(query);
+            console.log(result);
+            res.send(result);
+        });
+
+        //Find All orders by Email
+        app.get('/orders/:email',async(req, res)=> {
+            const email = req.params.email;
+            const query = {email};
+            // console.log(query);
+            const result = await orderCollection.find(query).toArray();
+            // console.log(result);
+            res.send(result);
+        });
+
+        // Deleting an existing Order
+        app.delete('/deleteorder/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log('Deleting', id);
+            const query = { _id: ObjectId(id) };
+            const result = await orderCollection.deleteOne(query);
+            res.send(result);
+        });
+        //Add User ratings in DB
+        app.post('/addrating',async(req, res)=> {
+            const doc = req.body;
+            // const toolID = doc.toolId;
+            
+            // const query = {_id: ObjectId(id)};
+            const result = await ratingCollection.insertOne(doc);
+            res.send(result);
+        });
+
     }
     finally {
 
