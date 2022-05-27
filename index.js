@@ -138,12 +138,26 @@ async function run() {
             const result = await ratingCollection.insertOne(doc);
             res.send(result);
         });
-        //Load All Ratings
+        //Load Six Ratings in home Page
+        app.get('/sixratings',async(req, res)=> {
+            const query = {};
+            const options = {
+                // sort returned documents in ascending order by title (A->Z)
+                sort: { _id: -1 },
+              };
+            const result = await ratingCollection.find(query,options).limit(6).toArray();
+            res.send(result);
+        });
+        //Load All Ratings in Ratings Page
         app.get('/allratings',async(req, res)=> {
             const query = {};
-            const result = await ratingCollection.find(query).toArray();
+            const options = {
+                // sort returned documents in ascending order by title (A->Z)
+                sort: { _id: -1 },
+              };
+            const result = await ratingCollection.find(query,options).toArray();
             res.send(result);
-        })
+        });
 
     }
     finally {
