@@ -12,10 +12,8 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dko3b.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
-
 
 //Verify JWT Token MiddleWare for Valid User Requests:
 function verifyJWT(req, res, next) {
@@ -33,7 +31,6 @@ function verifyJWT(req, res, next) {
     })
 }
 
-
 async function run() {
     try {
         await client.connect();
@@ -42,13 +39,10 @@ async function run() {
         const orderCollection = client.db("allumin_apparatus").collection("order_collection");
         const ratingCollection = client.db("allumin_apparatus").collection("rating_collection");
 
-
         //Verify Administrator MiddleWare :
         const verifyAdmin = async (req, res, next) => {
             const requesterEmail = req.decodedEmail;
-            // console.log(requesterEmail);
             const requesterDetails = await userCollection.findOne({ email: requesterEmail });
-            // console.log(requesterDetails);
             if (requesterDetails?.role === 'admin') {
                 next()
             } else {
@@ -56,14 +50,11 @@ async function run() {
             }
         }
 
-
         // generating Access-Token during login (Open)
         app.post('/login', async (req, res) => {
             const email = req.body;
             const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);  //CHECK EMAIL
             const userData = req.body;
-            //Adding User in DB
-            // console.log('the main is:',email.email);
             const filter = { email: email.email };
 
             const options = { upsert: true };
@@ -71,16 +62,14 @@ async function run() {
                 $set: userData
             };
             const result = await userCollection.updateOne(filter, updatedUser, options);
-            // console.log("Result is:",result);
-
-            //Sending AccessToken to client-side
             res.send({ accessToken });
         });
+
         //Home page 3 items load (Open)
         app.get('/tools', async (req, res) => {
             const query = {};
             const options = {
-                // sort returned documents in ascending order by title (A->Z)
+                // sort returned documents in decsending order by title (Z->A)
                 sort: { _id: -1 },
             };
             const result = await toolsCollection.find(query,options).limit(3).toArray();
@@ -90,41 +79,34 @@ async function run() {
         //Payment POST api Intent // (Verification required)
         app.post("/create-payment-intent", verifyJWT, async (req, res) => {
             const { orderValue } = req.body;
-            // console.log(orderValue);
-            // const { price } = order.orderValue;
             const amount = orderValue * 100;
             // Create a PaymentIntent with the order amount and currency
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
                 currency: "usd",
                 payment_method_types: ['card'],
-                // automatic_payment_methods: {
-                //     enabled: true,
-                // },
             });
             res.send({ clientSecret: paymentIntent.client_secret });
         });
-
 
         //Items page All items load (Verification Required)
         app.get('/alltools', async (req, res) => {
             const query = {};
             const result = await toolsCollection.find(query).toArray();
             res.send(result);
-        })
+        });
+
         //Items details by ID (Verification required)
         app.get('/item/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await toolsCollection.findOne(query);
             res.send(result);
-        })
+        });
+
         //Add order in DB (Verification required)
         app.post('/placeorder', verifyJWT, async (req, res) => {
             const doc = req.body;
-            // const toolID = doc.toolId;
-
-            // const query = {_id: ObjectId(id)};
             const result = await orderCollection.insertOne(doc);
             res.send(result);
         });
@@ -132,30 +114,24 @@ async function run() {
         //Update stock  (Verification required)
         app.put('/updatestock/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
-            // console.log('target ID:',id);
             const newInfo = req.body;
-            // console.log('Target Data:',newInfo);
             const filter = { _id: ObjectId(id) };
-            // const options = { upsert: true };
             const updatedItem = {
                 $set: newInfo
             };
             const result = await toolsCollection.updateOne(filter, updatedItem);
-            // console.log(result);
             res.send(result);
         });
+
         //Add/update user info in DB (Verification required)
         app.put('/updateuser', verifyJWT, async (req, res) => {
             const newInfo = req.body;
-
             const filter = { email: newInfo.email };
-            // console.log('Target Mail:',newInfo.email);
             const options = { upsert: true };
             const updatedItem = {
                 $set: newInfo
             };
             const result = await userCollection.updateOne(filter, updatedItem, options);
-            // console.log(result);
             res.send(result);
         });
 
@@ -163,9 +139,7 @@ async function run() {
         app.get('/user/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const query = { email };
-            // console.log(query);
             const result = await userCollection.findOne(query);
-            // console.log(result);
             res.send(result);
         });
 
@@ -173,44 +147,41 @@ async function run() {
         app.get('/orders/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const query = { email };
-            // console.log(query);
             const result = await orderCollection.find(query).toArray();
-            // console.log(result);
             res.send(result);
         });
 
         // Deleting an existing Order (Verification required)
         app.delete('/deleteorder/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
-            // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
             const result = await orderCollection.deleteOne(query);
             res.send(result);
         });
+
         //Add User ratings in DB (Verification required)
         app.post('/addrating', verifyJWT, async (req, res) => {
             const doc = req.body;
-            // const toolID = doc.toolId;
-
-            // const query = {_id: ObjectId(id)};
             const result = await ratingCollection.insertOne(doc);
             res.send(result);
         });
+
         //Load Six Ratings in home Page (open)
         app.get('/sixratings', async (req, res) => {
             const query = {};
             const options = {
-                // sort returned documents in ascending order by title (A->Z)
+                // sort returned documents in descending order by title (Z->A)
                 sort: { _id: -1 },
             };
             const result = await ratingCollection.find(query, options).limit(6).toArray();
             res.send(result);
         });
+
         //Load All Ratings in Ratings Page (open)
         app.get('/allratings', async (req, res) => {
             const query = {};
             const options = {
-                // sort returned documents in ascending order by title (A->Z)
+                // sort returned documents in decsending order by title (Z->A)
                 sort: { _id: -1 },
             };
             const result = await ratingCollection.find(query, options).toArray();
@@ -221,32 +192,25 @@ async function run() {
         app.get('/order/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
-            // console.log(query);
             const result = await orderCollection.findOne(query);
-            // console.log(result);
             res.send(result);
         });
 
         //Update Payment info in Order (Verification required)
         app.put('/updateorder/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
-            // console.log('target ID:',id);
             const newInfo = req.body;
-            // console.log('Target Data:',newInfo);
             const filter = { _id: ObjectId(id) };
-            // const options = { upsert: true };
             const updatedItem = {
                 $set: newInfo
             };
             const result = await orderCollection.updateOne(filter, updatedItem);
-            // console.log(result);
             res.send(result);
         });
 
         //Add New Product in DB (Verification required) (ADMIN)
         app.post('/addnewproduct', verifyJWT,verifyAdmin, async (req, res) => {
             const doc = req.body;
-
             const result = await toolsCollection.insertOne(doc);
             res.send(result);
         });
@@ -254,7 +218,6 @@ async function run() {
         // Deleting an existing Product (Verification required) (ADMIN)
         app.delete('/deletetool/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
-            // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
             const result = await toolsCollection.deleteOne(query);
             res.send(result);
@@ -282,7 +245,6 @@ async function run() {
         //Get All orders by ADMIN (Verification required) (ADMIN)
         app.get('/allorders', verifyJWT, async (req, res) => {
             const query = {};
-
             const result = await orderCollection.find(query).toArray();
             res.send(result);
         });
@@ -290,7 +252,6 @@ async function run() {
         // Deleting an existing Order BY ADMIN (Verification required) (ADMIN)
         app.delete('/deleteorderbyadmin/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
-            // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
             const result = await orderCollection.deleteOne(query);
             res.send(result);
@@ -299,16 +260,12 @@ async function run() {
         //Update Shipment info in Order (Verification required) (ADMIN)
         app.put('/updateshipment/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
-            // console.log('target ID:',id);
             const newInfo = req.body;
-            // console.log('Target Data:',newInfo);
             const filter = { _id: ObjectId(id) };
-            // const options = { upsert: true };
             const updatedItem = {
                 $set: newInfo
             };
             const result = await orderCollection.updateOne(filter, updatedItem);
-            // console.log(result);
             res.send(result);
         });
 
@@ -320,13 +277,10 @@ async function run() {
 
 run().catch(console.dir);
 
-
-
 //Global test api
 app.get('/', (req, res) => {
     res.send('Server is running');
 });
-
 
 //Listening to port
 app.listen(port, () => {
