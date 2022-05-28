@@ -16,6 +16,25 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dko3b.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+//Verify JWT Token for Valid User Requests:
+function verifyJWT(req,res,next){
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send({message:'UnAuthorized User Request!'});
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+        if(err){
+            return res.status(403).send({message:'Forbidden Access!'});
+        }
+        // console.log('The decode I get',decoded);
+        req.decodedEmail = decoded.email;
+        next();
+    })
+}
+
+
 async function run() {
     try {
         await client.connect();
@@ -24,7 +43,7 @@ async function run() {
         const orderCollection = client.db("allumin_apparatus").collection("order_collection");
         const ratingCollection = client.db("allumin_apparatus").collection("rating_collection");
 
-        // generating Access-Token during login for Client side
+        // generating Access-Token during login for Client side (Open)
         app.post('/login', async (req, res) => {
             const email = req.body;
             const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);  //CHECK EMAIL
@@ -43,15 +62,15 @@ async function run() {
             //Sending AccessToken to client-side
             res.send({ accessToken });
         });
-        //Home page 3 items load
+        //Home page 3 items load (Open)
         app.get('/tools', async (req, res) => {
             const query = {};
             const result = await toolsCollection.find(query).limit(3).toArray();
             res.send(result);
         })
 
-        //Payment POST api Intent //Need Verify Jwt
-        app.post("/create-payment-intent", async (req, res) => {
+        //Payment POST api Intent // (Verification required)
+        app.post("/create-payment-intent",verifyJWT, async (req, res) => {
             const {orderValue} = req.body;
             // console.log(orderValue);
             // const { price } = order.orderValue;
@@ -69,21 +88,21 @@ async function run() {
         });
 
 
-        //Items page All items load
+        //Items page All items load (Verification Required)
         app.get('/alltools', async (req, res) => {
             const query = {};
             const result = await toolsCollection.find(query).toArray();
             res.send(result);
         })
-        //Items details by ID
-        app.get('/item/:id', async (req, res) => {
+        //Items details by ID (Verification required)
+        app.get('/item/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await toolsCollection.findOne(query);
             res.send(result);
         })
-        //Add order in DB
-        app.post('/placeorder', async (req, res) => {
+        //Add order in DB (Verification required)
+        app.post('/placeorder', verifyJWT, async (req, res) => {
             const doc = req.body;
             // const toolID = doc.toolId;
 
@@ -92,8 +111,8 @@ async function run() {
             res.send(result);
         });
 
-        //Update stock 
-        app.put('/updatestock/:id', async (req, res) => {
+        //Update stock  (Verification required)
+        app.put('/updatestock/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('target ID:',id);
             const newInfo = req.body;
@@ -107,8 +126,8 @@ async function run() {
             // console.log(result);
             res.send(result);
         });
-        //Add/update user info in DB
-        app.put('/updateuser', async (req, res) => {
+        //Add/update user info in DB (Verification required)
+        app.put('/updateuser', verifyJWT, async (req, res) => {
             const newInfo = req.body;
 
             const filter = { email: newInfo.email };
@@ -122,8 +141,8 @@ async function run() {
             res.send(result);
         });
 
-        //User details by email
-        app.get('/user/:email', async (req, res) => {
+        //User details by email (Verification required)
+        app.get('/user/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const query = { email };
             // console.log(query);
@@ -132,8 +151,8 @@ async function run() {
             res.send(result);
         });
 
-        //Find All orders by Email
-        app.get('/orders/:email', async (req, res) => {
+        //Find All orders by Email (Verification required)
+        app.get('/orders/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const query = { email };
             // console.log(query);
@@ -142,16 +161,16 @@ async function run() {
             res.send(result);
         });
 
-        // Deleting an existing Order
-        app.delete('/deleteorder/:id', async (req, res) => {
+        // Deleting an existing Order (Verification required)
+        app.delete('/deleteorder/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
             const result = await orderCollection.deleteOne(query);
             res.send(result);
         });
-        //Add User ratings in DB
-        app.post('/addrating', async (req, res) => {
+        //Add User ratings in DB (Verification required)
+        app.post('/addrating', verifyJWT, async (req, res) => {
             const doc = req.body;
             // const toolID = doc.toolId;
 
@@ -159,7 +178,7 @@ async function run() {
             const result = await ratingCollection.insertOne(doc);
             res.send(result);
         });
-        //Load Six Ratings in home Page
+        //Load Six Ratings in home Page (open)
         app.get('/sixratings', async (req, res) => {
             const query = {};
             const options = {
@@ -169,7 +188,7 @@ async function run() {
             const result = await ratingCollection.find(query, options).limit(6).toArray();
             res.send(result);
         });
-        //Load All Ratings in Ratings Page
+        //Load All Ratings in Ratings Page (open)
         app.get('/allratings', async (req, res) => {
             const query = {};
             const options = {
@@ -180,8 +199,8 @@ async function run() {
             res.send(result);
         });
 
-        //Show order detail by ID
-        app.get('/order/:id', async (req, res) => {
+        //Show order detail by ID (Verification required)
+        app.get('/order/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             // console.log(query);
@@ -190,8 +209,8 @@ async function run() {
             res.send(result);
         });
 
-        //Update Payment info in Order
-        app.put('/updateorder/:id', async (req, res) => {
+        //Update Payment info in Order (Verification required)
+        app.put('/updateorder/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('target ID:',id);
             const newInfo = req.body;
@@ -206,16 +225,16 @@ async function run() {
             res.send(result);
         });
 
-        //Add New Product in DB
-        app.post('/addnewproduct', async (req, res) => {
+        //Add New Product in DB (Verification required) (ADMIN)
+        app.post('/addnewproduct', verifyJWT, async (req, res) => {
             const doc = req.body;
 
             const result = await toolsCollection.insertOne(doc);
             res.send(result);
         });
 
-        // Deleting an existing Product
-        app.delete('/deletetool/:id', async (req, res) => {
+        // Deleting an existing Product (Verification required) (ADMIN)
+        app.delete('/deletetool/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
@@ -223,15 +242,15 @@ async function run() {
             res.send(result);
         });
 
-        //Items page All items load
-        app.get('/allusers', async (req, res) => {
+        //Users page All Users load (Verification required) (ADMIN)
+        app.get('/allusers', verifyJWT, async (req, res) => {
             const query = {};
             const result = await userCollection.find(query).toArray();
             res.send(result);
         });
 
-        // Make Admin API
-        app.put('/makeadmin/:id', async (req, res) => {
+        // Make Admin API (Verification required) (ADMIN)
+        app.put('/makeadmin/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const newInfo = req.body;
             const query = { _id: ObjectId(id) };
@@ -242,16 +261,16 @@ async function run() {
             res.send(result);
         });
 
-        //Get All orders
-        app.get('/allorders', async (req, res) => {
+        //Get All orders by ADMIN (Verification required) (ADMIN)
+        app.get('/allorders',verifyJWT, async (req, res) => {
             const query = {};
 
             const result = await orderCollection.find(query).toArray();
             res.send(result);
         });
 
-        // Deleting an existing Order BY ADMIN //use AdminVerify
-        app.delete('/deleteorderbyadmin/:id', async (req, res) => {
+        // Deleting an existing Order BY ADMIN (Verification required) (ADMIN)
+        app.delete('/deleteorderbyadmin/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
@@ -259,8 +278,8 @@ async function run() {
             res.send(result);
         });
 
-        //Update Shipment info in Order
-        app.put('/updateshipment/:id', async (req, res) => {
+        //Update Shipment info in Order (Verification required) (ADMIN)
+        app.put('/updateshipment/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             // console.log('target ID:',id);
             const newInfo = req.body;
