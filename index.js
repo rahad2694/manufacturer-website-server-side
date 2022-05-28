@@ -223,6 +223,58 @@ async function run() {
             res.send(result);
         });
 
+        //Items page All items load
+        app.get('/allusers', async (req, res) => {
+            const query = {};
+            const result = await userCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // Make Admin API
+        app.put('/makeadmin/:id', async (req, res) => {
+            const id = req.params.id;
+            const newInfo = req.body;
+            const query = { _id: ObjectId(id) };
+            const updatedItem = {
+                $set: newInfo
+            };
+            const result = await userCollection.updateOne(query, updatedItem);
+            res.send(result);
+        });
+
+        //Get All orders
+        app.get('/allorders', async (req, res) => {
+            const query = {};
+
+            const result = await orderCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // Deleting an existing Order BY ADMIN //use AdminVerify
+        app.delete('/deleteorderbyadmin/:id', async (req, res) => {
+            const id = req.params.id;
+            // console.log('Deleting', id);
+            const query = { _id: ObjectId(id) };
+            const result = await orderCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        //Update Shipment info in Order
+        app.put('/updateshipment/:id', async (req, res) => {
+            const id = req.params.id;
+            // console.log('target ID:',id);
+            const newInfo = req.body;
+            // console.log('Target Data:',newInfo);
+            const filter = { _id: ObjectId(id) };
+            // const options = { upsert: true };
+            const updatedItem = {
+                $set: newInfo
+            };
+            const result = await orderCollection.updateOne(filter, updatedItem);
+            // console.log(result);
+            res.send(result);
+        });
+
     }
     finally {
 
