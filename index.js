@@ -138,7 +138,7 @@ async function run() {
         //User details by email (Verification done inside)
         app.get('/user/:email', async (req, res) => {
             const email = req.params.email;
-            console.log(email);
+            // console.log(email);
             const query = { email };
             const result = await userCollection.findOne(query);
 
