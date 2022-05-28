@@ -79,7 +79,11 @@ async function run() {
         //Home page 3 items load (Open)
         app.get('/tools', async (req, res) => {
             const query = {};
-            const result = await toolsCollection.find(query).limit(3).toArray();
+            const options = {
+                // sort returned documents in ascending order by title (A->Z)
+                sort: { _id: -1 },
+            };
+            const result = await toolsCollection.find(query,options).limit(3).toArray();
             res.send(result);
         })
 
