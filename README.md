@@ -1,7 +1,7 @@
 # Allumin Apparatus 
-### (This is a "Tools Manufacturer's Website" Which will have different functionalities for user login and Admin login)
+### A "Tools Manufacturer's Website"
 
-For Live Site Link [Click Here](https://vitapure-wms.web.app/).
+For Live Site Link [Click Here](https://tools-manufacturer-a873a.web.app/).
 
 
 ## Server Side Features:
