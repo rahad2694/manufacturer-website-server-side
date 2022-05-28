@@ -17,18 +17,17 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
-//Verify JWT Token for Valid User Requests:
-function verifyJWT(req,res,next){
+//Verify JWT Token MiddleWare for Valid User Requests:
+function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
-    if(!authHeader){
-        return res.status(401).send({message:'UnAuthorized User Request!'});
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized User Request!' });
     }
     const token = authHeader.split(' ')[1];
-    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
-        if(err){
-            return res.status(403).send({message:'Forbidden Access!'});
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden Access!' });
         }
-        // console.log('The decode I get',decoded);
         req.decodedEmail = decoded.email;
         next();
     })
@@ -42,6 +41,21 @@ async function run() {
         const toolsCollection = client.db("allumin_apparatus").collection("tools_collection");
         const orderCollection = client.db("allumin_apparatus").collection("order_collection");
         const ratingCollection = client.db("allumin_apparatus").collection("rating_collection");
+
+
+        //Verify Administrator MiddleWare :
+        const verifyAdmin = async (req, res, next) => {
+            const requesterEmail = req.decodedEmail;
+            // console.log(requesterEmail);
+            const requesterDetails = await userCollection.findOne({ email: requesterEmail });
+            // console.log(requesterDetails);
+            if (requesterDetails?.role === 'admin') {
+                next()
+            } else {
+                return res.status(403).send({ message: 'Forbidden Access! Admin Only!' });
+            }
+        }
+
 
         // generating Access-Token during login for Client side (Open)
         app.post('/login', async (req, res) => {
@@ -70,8 +84,8 @@ async function run() {
         })
 
         //Payment POST api Intent // (Verification required)
-        app.post("/create-payment-intent",verifyJWT, async (req, res) => {
-            const {orderValue} = req.body;
+        app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+            const { orderValue } = req.body;
             // console.log(orderValue);
             // const { price } = order.orderValue;
             const amount = orderValue * 100;
@@ -84,7 +98,7 @@ async function run() {
                 //     enabled: true,
                 // },
             });
-            res.send({clientSecret: paymentIntent.client_secret});
+            res.send({ clientSecret: paymentIntent.client_secret });
         });
 
 
@@ -226,7 +240,7 @@ async function run() {
         });
 
         //Add New Product in DB (Verification required) (ADMIN)
-        app.post('/addnewproduct', verifyJWT, async (req, res) => {
+        app.post('/addnewproduct', verifyJWT,verifyAdmin, async (req, res) => {
             const doc = req.body;
 
             const result = await toolsCollection.insertOne(doc);
@@ -234,7 +248,7 @@ async function run() {
         });
 
         // Deleting an existing Product (Verification required) (ADMIN)
-        app.delete('/deletetool/:id', verifyJWT, async (req, res) => {
+        app.delete('/deletetool/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
             // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
@@ -243,14 +257,14 @@ async function run() {
         });
 
         //Users page All Users load (Verification required) (ADMIN)
-        app.get('/allusers', verifyJWT, async (req, res) => {
+        app.get('/allusers', verifyJWT, verifyAdmin, async (req, res) => {
             const query = {};
             const result = await userCollection.find(query).toArray();
             res.send(result);
         });
 
         // Make Admin API (Verification required) (ADMIN)
-        app.put('/makeadmin/:id', verifyJWT, async (req, res) => {
+        app.put('/makeadmin/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const newInfo = req.body;
             const query = { _id: ObjectId(id) };
@@ -262,7 +276,7 @@ async function run() {
         });
 
         //Get All orders by ADMIN (Verification required) (ADMIN)
-        app.get('/allorders',verifyJWT, async (req, res) => {
+        app.get('/allorders', verifyJWT, async (req, res) => {
             const query = {};
 
             const result = await orderCollection.find(query).toArray();
@@ -270,7 +284,7 @@ async function run() {
         });
 
         // Deleting an existing Order BY ADMIN (Verification required) (ADMIN)
-        app.delete('/deleteorderbyadmin/:id', verifyJWT, async (req, res) => {
+        app.delete('/deleteorderbyadmin/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
             // console.log('Deleting', id);
             const query = { _id: ObjectId(id) };
@@ -279,7 +293,7 @@ async function run() {
         });
 
         //Update Shipment info in Order (Verification required) (ADMIN)
-        app.put('/updateshipment/:id', verifyJWT, async (req, res) => {
+        app.put('/updateshipment/:id', verifyJWT,verifyAdmin, async (req, res) => {
             const id = req.params.id;
             // console.log('target ID:',id);
             const newInfo = req.body;
