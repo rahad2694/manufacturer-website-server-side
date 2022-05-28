@@ -57,7 +57,7 @@ async function run() {
         }
 
 
-        // generating Access-Token during login for Client side (Open)
+        // generating Access-Token during login (Open)
         app.post('/login', async (req, res) => {
             const email = req.body;
             const accessToken = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET);  //CHECK EMAIL
