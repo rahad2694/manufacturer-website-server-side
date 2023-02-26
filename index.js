@@ -299,6 +299,8 @@ app.get('/', (req, res) => {
     res.send('Server is running');
 });
 
+//vercel adding
+
 //Listening to port
 app.listen(port, () => {
     console.log('Listening to port', port);
